@@ -7845,20 +7845,6 @@ function JSDCE(ast) {
   }
 }
 
-// Try to evaluate a global constructor ahead of time. See ctor_evaller.py
-function evalCtor(ast) {
-  // Find the global ctors, the asm module, and receive the mem init.
-  traverse(ast, 
-  var memInit = extraInfo.memInit;
-  // Generate a safe sandboxed environment. We replace all ffis with errors. Otherwise,
-  // asm.js can't call outside, so we are ok.
-
-  // Execute the sandboxed code. If an error happened due to calling an ffi, that's fine,
-  // us exiting with an error tells the caller that we failed.
-
-  // Verify that asm globals have not been changed.
-}
-
 // Passes table
 
 var minifyWhitespace = false, printMetadata = true, asm = false, asmPreciseF32 = false, emitJSON = false, last = false;
@@ -7896,7 +7882,6 @@ var passes = {
   dumpCallGraph: dumpCallGraph,
   asmLastOpts: asmLastOpts,
   JSDCE: JSDCE,
-  evalCtor: evalCtor,
   noop: function() {},
 
   // flags
