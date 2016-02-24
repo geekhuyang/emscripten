@@ -51,13 +51,15 @@ asm['%s']();
   proc = Popen(shared.NODE_JS + [temp_file], stdout=PIPE)
   out, err = proc.communicate()
   if proc.returncode != 0: return False
-  # Success! out contains the new mem init
+  # Success! out contains the new mem init, write it out
+  mem_init = ''.join(map(chr, json.loads(out)))
+  # Remove this ctor and write that out # TODO: remove from the asm export as well
   if len(ctors) == 1:
     new_ctors = ''
   else:
     new_ctors = ctors_text[:ctors_text.find('(') + 1] + ctors_text[ctors_text.find(',')+1:]
   js = js[:ctors_start] + new_ctors = js[ctors_end:]
-  return out
+  return (js, mem_init)
 
 # main
 
@@ -68,14 +70,15 @@ removed_one = False
 while True:
   shared.logging.debug('ctor_evaller: trying to eval a global constructor')
   js = open(js_file).read()
-  mem_init json.dumps(map(ord, open(mem_init_file, 'rb').read()))
-  if not eval_ctor(js, mem_init):
+  mem_init = json.dumps(map(ord, open(mem_init_file, 'rb').read()))
+  result = eval_ctor(js, mem_init)
+  if not result:
     shared.logging.debug('ctor_evaller: done')
     break # that's it, no more luck. either no ctors, or we failed to eval a ctor
-  # we succeeded. out contains the new JS, err contains the new memory init
   shared.logging.debug('ctor_evaller: success!')
-  open(js_file, 'w').write(out)
-  open(mem_init_file, 'wb').write(''.join(map(chr, json.loads(err))))
+  js, mem_init = result
+  open(js_file, 'w').write(js)
+  open(mem_init_file, 'wb').write(mem_init)
   removed_one = True
 
 # If we removed one, dead function elimination can help us
