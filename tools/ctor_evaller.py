@@ -26,7 +26,6 @@ def eval_ctor(js, mem_init):
   ctors_text = js[ctors_start:ctors_end]
   ctors = filter(lambda ctor: ctor.endswith('()') and not ctor == 'function()' and '.' not in ctor, ctors_text.split(' '))
   if len(ctors) == 0: return False
-  print ctors
   ctor = ctors[0].replace('()', '')
   shared.logging.debug('trying to eval ctor: ' + ctor)
   # Find the asm module, and receive the mem init.
@@ -52,11 +51,15 @@ def eval_ctor(js, mem_init):
   # Generate a safe sandboxed environment. We replace all ffis with errors. Otherwise,
   # asm.js can't call outside, so we are ok.
   open(temp_file, 'w').write('''
-var buffer = new ArrayBuffer(%s);
+var totalMemory = %s;
+
+var buffer = new ArrayBuffer(totalMemory);
+var heap = new Uint8Array(buffer);
 
 var memInit = %s;
+var globalBase = %d;
 
-(new Uint8Array(buffer)).set(memInit, %d);
+heap.set(memInit, globalBase);
 
 if (!Math.imul) {
   Math.imul = Math.imul || function(a, b) {
@@ -93,8 +96,14 @@ var libraryArg = {
 
 // Try to run the constructor
 asm['%s']();
+// We succeeded!
 
-// We succeeded - verify asm global vars, and write out new mem init
+// Verify asm global vars
+
+// Write out new mem init. It might be bigger, look for non-0 bytes
+var newSize = totalMemory;
+while (newSize > globalBase && heap[newSize-1] == 0) newSize--;
+console.log(Array.prototype.slice.call(heap.subarray(globalBase, newSize)));
 
 ''' % (total_memory, mem_init, global_base, asm, ctor))
   # Execute the sandboxed code. If an error happened due to calling an ffi, that's fine,
